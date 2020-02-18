@@ -1,4 +1,4 @@
-module vad
+module github.com/pidato/vad-go
 
 go 1.13
 
