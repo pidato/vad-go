@@ -1,6 +1,6 @@
 module github.com/pidato/vad-go
 
-go 1.13
+go 1.14
 
 require (
 	github.com/go-audio/audio v1.0.0

@@ -1,7 +1,6 @@
 package vad
 
 /*
-#cgo LDFLAGS: -lfvad
 #include "fvad.h"
 */
 import "C"
