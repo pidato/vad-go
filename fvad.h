@@ -89,6 +89,14 @@ int fvad_set_sample_rate(Fvad* inst, int sample_rate);
  */
 int fvad_process(Fvad* inst, const int16_t* frame, size_t length);
 
+void fvad_downsample_by_2(const int16_t* signal_in,
+                          int16_t* signal_out,
+                          int32_t* filter_state,
+                          size_t in_length);
+
+void fvad_upsample_by_2(const int16_t* in, size_t len,
+                        int16_t* out, int32_t* filter_state);
+
 #ifdef __cplusplus
 }
 #endif

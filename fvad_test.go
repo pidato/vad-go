@@ -8,10 +8,13 @@ import (
 	"github.com/go-audio/riff"
 	"github.com/go-audio/wav"
 	"io"
+	"io/ioutil"
 	"os"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
+	"unsafe"
 )
 
 type FrameSize int
@@ -81,6 +84,99 @@ func TestVAD_Process(t *testing.T) {
 			fmt.Println("Err")
 		}
 	}
+}
+
+func TestDownSampleBy2(t *testing.T) {
+	frames20ms, err := load("recording.wav", 320)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fout, err := os.OpenFile("8000.pcm", os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0755)
+	var state [8]int32
+	frames8000 := make([][]int16, 0, 128)
+	for _, frame := range frames20ms {
+		out := make([]int16, 160)
+		DownSampleBy2(frame, out, &state)
+		frames8000 = append(frames8000, out)
+
+		b := *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{
+			Data: uintptr(unsafe.Pointer(&out[0])),
+			Len:  len(out) * 2,
+			Cap:  len(out) * 2,
+		}))
+
+		_, _ = fout.Write(b)
+	}
+
+	_ = fout.Sync()
+	_ = fout.Close()
+}
+
+func TestUpSampleBy2(t *testing.T) {
+	frames20ms, err := load("recording.wav", 320)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fout, err := os.OpenFile("32000.pcm", os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0755)
+	var state [8]int32
+	frames8000 := make([][]int16, 0, 128)
+	for _, frame := range frames20ms {
+		out := make([]int16, 640)
+		UpSampleBy2(frame, out, &state)
+		frames8000 = append(frames8000, out)
+
+		b := *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{
+			Data: uintptr(unsafe.Pointer(&out[0])),
+			Len:  len(out) * 2,
+			Cap:  len(out) * 2,
+		}))
+
+		_, _ = fout.Write(b)
+	}
+
+	_ = fout.Sync()
+	_ = fout.Close()
+}
+
+func TestUpSample8000to16000(t *testing.T) {
+	TestDownSampleBy2(t)
+	all, err := ioutil.ReadFile("8000.pcm")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fout, err := os.OpenFile("16000.pcm", os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0755)
+
+	var state [8]int32
+	for i := 0; i < len(all); i += 320 {
+		if i+320 > len(all) {
+			break
+		}
+		inBytes := all[i : i+320]
+		in := *(*[]int16)(unsafe.Pointer(&reflect.SliceHeader{
+			Data: uintptr(unsafe.Pointer(&inBytes[0])),
+			Len:  160,
+			Cap:  160,
+		}))
+
+		out := make([]int16, 320)
+		err = UpSampleBy2(in, out, &state)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b := *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{
+			Data: uintptr(unsafe.Pointer(&out[0])),
+			Len:  len(out) * 2,
+			Cap:  len(out) * 2,
+		}))
+
+		_, _ = fout.Write(b)
+	}
+
+	_ = fout.Sync()
+	_ = fout.Close()
 }
 
 func TestVAD_SetMode(t *testing.T) {
