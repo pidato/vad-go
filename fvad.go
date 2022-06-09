@@ -5,7 +5,6 @@ package vad
 */
 import "C"
 import (
-	"errors"
 	"reflect"
 	"sync"
 	"unsafe"
@@ -134,28 +133,28 @@ func (v *VAD) Close() error {
 	return nil
 }
 
-func DownSampleBy2(in []int16, out []int16, state *[8]int32) error {
-	if len(out) != len(in)/2 {
-		return errors.New("out must be have the size of in")
-	}
-	C.fvad_downsample_by_2(
-		(*C.int16_t)(unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&in)).Data)),
-		(*C.int16_t)(unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&out)).Data)),
-		(*C.int32_t)(unsafe.Pointer(state)),
-		C.size_t(len(in)),
-	)
-	return nil
-}
-
-func UpSampleBy2(in []int16, out []int16, state *[8]int32) error {
-	if len(out) != len(in)*2 {
-		return errors.New("out must be have the size of in")
-	}
-	C.fvad_upsample_by_2(
-		(*C.int16_t)(unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&in)).Data)),
-		C.size_t(len(in)),
-		(*C.int16_t)(unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&out)).Data)),
-		(*C.int32_t)(unsafe.Pointer(state)),
-	)
-	return nil
-}
+//func DownSampleBy2(in []int16, out []int16, state *[8]int32) error {
+//	if len(out) != len(in)/2 {
+//		return errors.New("out must be have the size of in")
+//	}
+//	C.fvad_downsample_by_2(
+//		(*C.int16_t)(unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&in)).Data)),
+//		(*C.int16_t)(unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&out)).Data)),
+//		(*C.int32_t)(unsafe.Pointer(state)),
+//		C.size_t(len(in)),
+//	)
+//	return nil
+//}
+//
+//func UpSampleBy2(in []int16, out []int16, state *[8]int32) error {
+//	if len(out) != len(in)*2 {
+//		return errors.New("out must be have the size of in")
+//	}
+//	C.fvad_upsample_by_2(
+//		(*C.int16_t)(unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&in)).Data)),
+//		C.size_t(len(in)),
+//		(*C.int16_t)(unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&out)).Data)),
+//		(*C.int32_t)(unsafe.Pointer(state)),
+//	)
+//	return nil
+//}
