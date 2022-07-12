@@ -1,4 +1,4 @@
-package vad
+package vad_go
 
 import (
 	"encoding/binary"
@@ -8,10 +8,13 @@ import (
 	"github.com/go-audio/riff"
 	"github.com/go-audio/wav"
 	"io"
+	"io/ioutil"
 	"os"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
+	"unsafe"
 )
 
 type FrameSize int
@@ -34,9 +37,7 @@ func TestVAD_Process(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	vad := New()
-	vad.SetMode(VeryAggressive)
-	vad.SetSampleRate(16000)
+	vad, _ := New(16000, VeryAggressive)
 
 	frameDuration := reader.FrameDuration()
 	speaking := false
@@ -56,7 +57,8 @@ func TestVAD_Process(t *testing.T) {
 
 		frameCount++
 		elapsed := frameDuration * time.Duration(frameCount)
-		switch vad.Process(frame) {
+		result := vad.Process(frame)
+		switch result {
 		case Active:
 			if !speaking {
 				fmt.Printf("\tEnd: 	%v\n", elapsed)
@@ -78,103 +80,103 @@ func TestVAD_Process(t *testing.T) {
 				fmt.Printf("\tFrom: 	%v\n", elapsed)
 			}
 		default:
-			fmt.Println("Err")
+			fmt.Println("Err", result)
 		}
 	}
 }
 
-//func TestDownSampleBy2(t *testing.T) {
-//	frames20ms, err := load("recording.wav", 320)
-//	if err != nil {
-//		t.Fatal(err)
-//	}
-//
-//	fout, err := os.OpenFile("8000.pcm", os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0755)
-//	var state [8]int32
-//	frames8000 := make([][]int16, 0, 128)
-//	for _, frame := range frames20ms {
-//		out := make([]int16, 160)
-//		DownSampleBy2(frame, out, &state)
-//		frames8000 = append(frames8000, out)
-//
-//		b := *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{
-//			Data: uintptr(unsafe.Pointer(&out[0])),
-//			Len:  len(out) * 2,
-//			Cap:  len(out) * 2,
-//		}))
-//
-//		_, _ = fout.Write(b)
-//	}
-//
-//	_ = fout.Sync()
-//	_ = fout.Close()
-//}
-//
-//func TestUpSampleBy2(t *testing.T) {
-//	frames20ms, err := load("recording.wav", 320)
-//	if err != nil {
-//		t.Fatal(err)
-//	}
-//
-//	fout, err := os.OpenFile("32000.pcm", os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0755)
-//	var state [8]int32
-//	frames8000 := make([][]int16, 0, 128)
-//	for _, frame := range frames20ms {
-//		out := make([]int16, 640)
-//		UpSampleBy2(frame, out, &state)
-//		frames8000 = append(frames8000, out)
-//
-//		b := *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{
-//			Data: uintptr(unsafe.Pointer(&out[0])),
-//			Len:  len(out) * 2,
-//			Cap:  len(out) * 2,
-//		}))
-//
-//		_, _ = fout.Write(b)
-//	}
-//
-//	_ = fout.Sync()
-//	_ = fout.Close()
-//}
-//
-//func TestUpSample8000to16000(t *testing.T) {
-//	TestDownSampleBy2(t)
-//	all, err := ioutil.ReadFile("8000.pcm")
-//	if err != nil {
-//		t.Fatal(err)
-//	}
-//
-//	fout, err := os.OpenFile("16000.pcm", os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0755)
-//
-//	var state [8]int32
-//	for i := 0; i < len(all); i += 320 {
-//		if i+320 > len(all) {
-//			break
-//		}
-//		inBytes := all[i : i+320]
-//		in := *(*[]int16)(unsafe.Pointer(&reflect.SliceHeader{
-//			Data: uintptr(unsafe.Pointer(&inBytes[0])),
-//			Len:  160,
-//			Cap:  160,
-//		}))
-//
-//		out := make([]int16, 320)
-//		err = UpSampleBy2(in, out, &state)
-//		if err != nil {
-//			t.Fatal(err)
-//		}
-//		b := *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{
-//			Data: uintptr(unsafe.Pointer(&out[0])),
-//			Len:  len(out) * 2,
-//			Cap:  len(out) * 2,
-//		}))
-//
-//		_, _ = fout.Write(b)
-//	}
-//
-//	_ = fout.Sync()
-//	_ = fout.Close()
-//}
+func TestDownSampleBy2(t *testing.T) {
+	frames20ms, err := load("recording.wav", 320)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fout, err := os.OpenFile("8000.pcm", os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0755)
+	var state [8]int32
+	frames8000 := make([][]int16, 0, 128)
+	for _, frame := range frames20ms {
+		out := make([]int16, 160)
+		DownSampleBy2(frame, out, &state)
+		frames8000 = append(frames8000, out)
+
+		b := *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{
+			Data: uintptr(unsafe.Pointer(&out[0])),
+			Len:  len(out) * 2,
+			Cap:  len(out) * 2,
+		}))
+
+		_, _ = fout.Write(b)
+	}
+
+	_ = fout.Sync()
+	_ = fout.Close()
+}
+
+func TestUpSampleBy2(t *testing.T) {
+	frames20ms, err := load("recording.wav", 320)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fout, err := os.OpenFile("32000.pcm", os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0755)
+	var state [8]int32
+	frames8000 := make([][]int16, 0, 128)
+	for _, frame := range frames20ms {
+		out := make([]int16, 640)
+		UpSampleBy2(frame, out, &state)
+		frames8000 = append(frames8000, out)
+
+		b := *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{
+			Data: uintptr(unsafe.Pointer(&out[0])),
+			Len:  len(out) * 2,
+			Cap:  len(out) * 2,
+		}))
+
+		_, _ = fout.Write(b)
+	}
+
+	_ = fout.Sync()
+	_ = fout.Close()
+}
+
+func TestUpSample8000to16000(t *testing.T) {
+	TestDownSampleBy2(t)
+	all, err := ioutil.ReadFile("8000.pcm")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fout, err := os.OpenFile("16000.pcm", os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0755)
+
+	var state [8]int32
+	for i := 0; i < len(all); i += 320 {
+		if i+320 > len(all) {
+			break
+		}
+		inBytes := all[i : i+320]
+		in := *(*[]int16)(unsafe.Pointer(&reflect.SliceHeader{
+			Data: uintptr(unsafe.Pointer(&inBytes[0])),
+			Len:  160,
+			Cap:  160,
+		}))
+
+		out := make([]int16, 320)
+		err = UpSampleBy2(in, out, &state)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b := *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{
+			Data: uintptr(unsafe.Pointer(&out[0])),
+			Len:  len(out) * 2,
+			Cap:  len(out) * 2,
+		}))
+
+		_, _ = fout.Write(b)
+	}
+
+	_ = fout.Sync()
+	_ = fout.Close()
+}
 
 func TestVAD_SetMode(t *testing.T) {
 	frames10ms, err := load("recording.wav", 160)
@@ -280,15 +282,14 @@ func BenchmarkVAD_Process(b *testing.B) {
 
 func BenchmarkVAD_New(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		vad := New()
-		vad.SetMode(Aggressive)
+		vad, _ := New(16000, Aggressive)
 		_ = vad.Close()
 	}
 }
 
 func BenchmarkVAD_Reset(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		vad := New()
+		vad, _ := New(16000, Aggressive)
 		vad.Reset()
 		_ = vad.Close()
 	}
@@ -296,10 +297,10 @@ func BenchmarkVAD_Reset(b *testing.B) {
 
 func runProcess(b *testing.B, mode Mode, data [][]int16) {
 	for i := 0; i < b.N; i++ {
-		vad := New()
+		vad, _ := New(16000, mode)
 		defer vad.Close()
-		vad.SetMode(mode)
-		vad.SetSampleRate(16000)
+		//vad.SetMode(mode)
+		//vad.SetSampleRate(16000)
 
 		for frameNum, frame := range data {
 			_ = frameNum
@@ -335,10 +336,10 @@ func runProcessStats(t *testing.T, mode Mode, data [][]int16) Stats {
 	eventAt := time.Duration(0)
 	frameDuration := FrameSize(len(data[0])).Duration()
 
-	vad := New()
+	vad, _ := New(16000, mode)
 	defer vad.Close()
-	vad.SetMode(mode)
-	vad.SetSampleRate(16000)
+	//vad.SetMode(mode)
+	//vad.SetSampleRate(16000)
 
 	for frameNum, frame := range data {
 		elapsed = frameDuration * time.Duration(frameNum)
