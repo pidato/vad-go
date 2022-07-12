@@ -64,6 +64,40 @@ void do_webrtc_vad_process(size_t arg0, size_t arg1) {
 	);
 }
 
+typedef struct do_webrtc_downsample_by_2_t {
+	size_t in;
+	size_t size;
+	size_t out;
+	size_t state;
+} do_webrtc_downsample_by_2_t;
+
+void do_webrtc_downsample_by_2(size_t arg0, size_t arg1) {
+	do_webrtc_downsample_by_2_t* args = (do_webrtc_downsample_by_2_t*)(void*)arg0;
+	WebRtcSpl_DownsampleBy2(
+		(int16_t*)(void*)args->in,
+		args->size,
+		(int16_t*)(void*)args->out,
+		(int32_t*)(void*)args->state
+	);
+}
+
+typedef struct do_webrtc_upsample_by_2_t {
+	size_t in;
+	size_t size;
+	size_t out;
+	size_t state;
+} do_webrtc_upsample_by_2_t;
+
+void do_webrtc_upsample_by_2(size_t arg0, size_t arg1) {
+	do_webrtc_upsample_by_2_t* args = (do_webrtc_upsample_by_2_t*)(void*)arg0;
+	WebRtcSpl_UpsampleBy2(
+		(int16_t*)(void*)args->in,
+		args->size,
+		(int16_t*)(void*)args->out,
+		(int32_t*)(void*)args->state
+	);
+}
+
 */
 import "C"
 import (
@@ -269,12 +303,25 @@ func DownSampleBy2(in []int16, out []int16, state *[8]int32) error {
 	if len(out) != len(in)/2 {
 		return errors.New("out must be have the size of in")
 	}
-	C.WebRtcSpl_DownsampleBy2(
-		(*C.int16_t)(unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&in)).Data)),
-		C.size_t(len(in)),
-		(*C.int16_t)(unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&out)).Data)),
-		(*C.int32_t)(unsafe.Pointer(state)),
-	)
+	request := struct {
+		in    uintptr
+		size  uintptr
+		out   uintptr
+		state uintptr
+	}{
+		in:    (*reflect.SliceHeader)(unsafe.Pointer(&in)).Data,
+		size:  uintptr(len(in)),
+		out:   (*reflect.SliceHeader)(unsafe.Pointer(&out)).Data,
+		state: uintptr(unsafe.Pointer(state)),
+	}
+	ptr := uintptr(unsafe.Pointer(&request))
+	cgo.NonBlocking((*byte)(C.do_webrtc_downsample_by_2), ptr, 0)
+	//C.WebRtcSpl_DownsampleBy2(
+	//	(*C.int16_t)(unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&in)).Data)),
+	//	C.size_t(len(in)),
+	//	(*C.int16_t)(unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&out)).Data)),
+	//	(*C.int32_t)(unsafe.Pointer(state)),
+	//)
 	return nil
 }
 
@@ -282,11 +329,24 @@ func UpSampleBy2(in []int16, out []int16, state *[8]int32) error {
 	if len(out) != len(in)*2 {
 		return errors.New("out must be have the size of in")
 	}
-	C.WebRtcSpl_UpsampleBy2(
-		(*C.int16_t)(unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&in)).Data)),
-		C.size_t(len(in)),
-		(*C.int16_t)(unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&out)).Data)),
-		(*C.int32_t)(unsafe.Pointer(state)),
-	)
+	request := struct {
+		in    uintptr
+		size  uintptr
+		out   uintptr
+		state uintptr
+	}{
+		in:    (*reflect.SliceHeader)(unsafe.Pointer(&in)).Data,
+		size:  uintptr(len(in)),
+		out:   (*reflect.SliceHeader)(unsafe.Pointer(&out)).Data,
+		state: uintptr(unsafe.Pointer(state)),
+	}
+	ptr := uintptr(unsafe.Pointer(&request))
+	cgo.NonBlocking((*byte)(C.do_webrtc_upsample_by_2), ptr, 0)
+	//C.WebRtcSpl_UpsampleBy2(
+	//	(*C.int16_t)(unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&in)).Data)),
+	//	C.size_t(len(in)),
+	//	(*C.int16_t)(unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&out)).Data)),
+	//	(*C.int32_t)(unsafe.Pointer(state)),
+	//)
 	return nil
 }
