@@ -198,28 +198,28 @@ func (v *VAD) Process(data []int16) Result {
 	if v.closed {
 		return Invalid
 	}
-	//request := struct {
-	//	ptr        *C.VadInst
-	//	data       uintptr
-	//	length     uintptr
-	//	sampleRate int32
-	//	result     int32
-	//}{
-	//	ptr:        v.ptr,
-	//	data:       (*reflect.SliceHeader)(unsafe.Pointer(&data)).Data,
-	//	length:     uintptr(len(data)),
-	//	sampleRate: v.sampleRate,
-	//	result:     0,
-	//}
-	//ptr := uintptr(unsafe.Pointer(&request))
-	//cgo.NonBlocking((*byte)(C.do_webrtc_vad_process), ptr, 0)
-	//return Result(request.result)
-	return Result(
-		C.WebRtcVad_Process(
-			v.ptr,
-			C.int(v.sampleRate),
-			(*C.int16_t)(unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&data)).Data)),
-			(C.size_t)(uint(len(data)))))
+	request := struct {
+		ptr        *C.VadInst
+		data       uintptr
+		length     uintptr
+		sampleRate int32
+		result     int32
+	}{
+		ptr:        v.ptr,
+		data:       (*reflect.SliceHeader)(unsafe.Pointer(&data)).Data,
+		length:     uintptr(len(data)),
+		sampleRate: v.sampleRate,
+		result:     0,
+	}
+	ptr := uintptr(unsafe.Pointer(&request))
+	cgo.NonBlocking((*byte)(C.do_webrtc_vad_process), ptr, 0)
+	return Result(request.result)
+	//return Result(
+	//	C.WebRtcVad_Process(
+	//		v.ptr,
+	//		C.int(v.sampleRate),
+	//		(*C.int16_t)(unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&data)).Data)),
+	//		(C.size_t)(uint(len(data)))))
 }
 
 func (v *VAD) ProcessNoLock(data []int16) Result {
